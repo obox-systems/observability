@@ -5,7 +5,7 @@ use reqwest::Url;
 #[tokio::main]
 #[tracing::instrument]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt().compact().init();
+    let _providers = demo::init_tracing()?;
 
     let args = Args::parse();
 
