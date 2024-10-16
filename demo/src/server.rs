@@ -6,6 +6,7 @@ use tracing::Level;
 pub async fn run_sample_server() -> anyhow::Result<()> {
     let app = Router::new().route("/", get(handler));
 
+    tracing::info!("running server at localhost:5000");
     axum::serve(tokio::net::TcpListener::bind("0.0.0.0:5000").await?, app).await?;
 
     Ok(())
