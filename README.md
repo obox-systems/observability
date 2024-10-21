@@ -20,6 +20,9 @@ Loki + Promtail + Grafana (Loki Stack)
 Graylog
 Fluentd + Fluent Bit
 
+# rust part
+https://broch.tech/posts/rust-tracing-opentelemetry/
+
 # info
 
 rum-vs-apm: https://sematext.com/blog/rum-vs-apm/
