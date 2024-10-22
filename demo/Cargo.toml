@@ -1,0 +1,27 @@
+[package]
+name = "demo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# other
+axum = { version = "0.7"}
+tokio ={ version = "1.40", features = [ "full"]}
+rand = { version = "*" }
+reqwest = {version = "0.12"}
+# CLI
+clap = {version = "4.5", features = ["derive"]}
+
+# tracings 
+tracing = "0.1"
+tracing-opentelemetry = "0.27"
+tracing-subscriber = { version = "0.3", features = ["env-filter"]}
+
+# OpenTelemery
+opentelemetry = { version = "0.26", features = ["trace"]}
+opentelemetry_sdk = { version = "0.26", features = ["rt-tokio"] }
+opentelemetry-otlp = { version="0.26",  features = ["tonic", "metrics", "logs"] }
+opentelemetry-semantic-conventions = { version="0.26" }
+
+# lazy error "handling"
+anyhow = { version = "1.0"}

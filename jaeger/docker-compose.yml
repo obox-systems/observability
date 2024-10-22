@@ -1,0 +1,34 @@
+networks:
+  dev:
+
+services:
+  demo:
+    build:
+      context: ../demo
+    container_name: demo_app
+    hostname: demo_app
+    environment:
+      - OTEL_EXPORTER_OTEL_URL=http://jaeger:4317
+      - RUST_LOG=info
+    ports:
+      - "5000:5000"
+    networks:
+      dev:
+
+  jaeger:
+    image: jaegertracing/all-in-one
+    container_name: jaeger_ui
+    environment:
+    - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "6831:6831/udp"  # Jaeger compact Thrift protocol (UDP)
+      - "6832:6832/udp"  # Jaeger binary Thrift protocol (UDP)
+      - "5778:5778"      # Jaeger agent HTTP management port
+      - "16686:16686"    # Jaeger query UI port
+      - "4317:4317"      # Jaeger gRPC HTTP collector port
+      - "4318:4318"      # Jaeger gRPC HTTP collector port (encrypted)
+      - "14250:14250"    # Jaeger gRPC tracing port
+      - "14268:14268"    # Jaeger gRPC HTTP internal service communication port
+      - "14269:14269"    # Jaeger gRPC HTTP internal service communication port (encrypted)
+    networks:
+      dev:
