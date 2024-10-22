@@ -1,0 +1,16 @@
+# investigate those
+Loki + Promtail + Grafana (Loki Stack)
+Graylog
+Fluentd + Fluent Bit
+
+
+# find place for these
+vs-apm: https://sematext.com/blog/rum-vs-apm/
+
+Wiki about terms: https://www.o11y.wiki/#/
+
+OpenTelemetry collector: https://itnext.io/exploring-the-opentelemetry-collector-570f3097cfbc
+
+Monitor telemetry with Prometheus & Grafana: https://developer.hashicorp.com/vault/tutorials/archive/monitor-telemetry-grafana-prometheus
+
+A practical guide to data collection with OpenTelemetry and Prometheus: https://grafana.com/blog/2023/07/20/a-practical-guide-to-data-collection-with-opentelemetry-and-prometheus/
