@@ -1,0 +1,116 @@
+networks:
+  default:
+    name: dev
+    external: false
+
+services:
+  demo:
+    build:
+      context: ../demo
+    container_name: demo_app_parseable
+    hostname: demo_app
+    environment:
+      - OTEL_EXPORTER_OTEL_URL=http://collector:4317
+      - RUST_LOG=info
+    ports:
+      - "5000:5000"
+
+  collector:
+    image: otel/opentelemetry-collector-contrib
+    container_name: otel_collector_parseable
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+    environment:
+      - EXPORT_URL=http://parseable-ingest:8000
+      - AUTH_HEADER="Basic cGFyc2VhYmxlYWRtaW46cGFyc2VhYmxlYWRtaW4=" # Generated with `echo -n '<username>:<password>' | base64`
+      - STREAM_NAME=default
+    ports: # I expose all possible ports for demo app
+      - "1888:1888" # pprof extension
+      - "8888:8888" # Prometheus metrics exposed by the Collector
+      - "8889:8889" # Prometheus exporter metrics
+      - "13133:13133" # health_check extension
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP http receiver
+      - "55679:55679" # zpages extension
+
+  minio:
+    image: minio/minio:RELEASE.2023-02-10T18-48-39Z
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /tmp/minio/parseable && \
+        minio server /tmp/minio
+    environment:
+      - MINIO_ROOT_USER=parseable
+      - MINIO_ROOT_PASSWORD=supersecret
+      - MINIO_UPDATE=off
+    ports:
+      - "9000:9000"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 15s
+      timeout: 20s
+      retries: 5
+
+  parseable-query:
+      image: containers.parseable.com/parseable/parseable:edge
+      command: [ "parseable", "s3-store" ]
+      ports:
+        - "8001:8000"
+      environment:
+        - P_S3_URL=http://minio:9000
+        - P_S3_ACCESS_KEY=parseable
+        - P_S3_SECRET_KEY=supersecret
+        - P_S3_REGION=us-east-1
+        - P_S3_BUCKET=parseable
+        - P_STAGING_DIR=/tmp/data
+        - P_USERNAME=parseableadmin
+        - P_PASSWORD=parseableadmin
+        - P_CHECK_UPDATE=false
+        - P_PARQUET_COMPRESSION_ALGO=snappy
+        - P_MODE=query
+      healthcheck:
+        test: [ "CMD", "curl", "-f", "http://localhost:8000/api/v1/liveness" ]
+        interval: 15s
+        timeout: 20s
+        retries: 5
+      depends_on:
+        - minio
+      deploy:
+        restart_policy:
+          condition: on-failure
+          delay: 20s
+          max_attempts: 3
+
+  parseable-ingest:
+      image: containers.parseable.com/parseable/parseable:edge
+      command: [ "parseable", "s3-store" ]
+      ports:
+        - "8000:8000"
+      environment:
+        - P_S3_URL=http://minio:9000
+        - P_S3_ACCESS_KEY=parseable
+        - P_S3_SECRET_KEY=supersecret
+        - P_S3_REGION=us-east-1
+        - P_S3_BUCKET=parseable
+        - P_STAGING_DIR=/tmp/data
+        - P_USERNAME=parseableadmin
+        - P_PASSWORD=parseableadmin
+        - P_CHECK_UPDATE=false
+        - P_PARQUET_COMPRESSION_ALGO=snappy
+        - P_MODE=ingest
+        - P_INGESTOR_ENDPOINT=parseable-ingest:8001
+      healthcheck:
+        test: [ "CMD", "curl", "-f", "http://localhost:8000/api/v1/liveness" ]
+        interval: 15s
+        timeout: 20s
+        retries: 5
+      depends_on:
+        - parseable-query
+        - minio
+      deploy:
+        restart_policy:
+          condition: on-failure
+          delay: 20s
+          max_attempts: 3
