@@ -6,6 +6,7 @@ pub use server::*;
 
 use opentelemetry::trace::TracerProvider;
 use opentelemetry::KeyValue;
+use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::trace::Config;
@@ -35,11 +36,21 @@ pub fn init_tracing() -> anyhow::Result<()> {
         )
         .install_batch(opentelemetry_sdk::runtime::Tokio)?;
 
-    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer.tracer("opentelemetry"));
+    let tracing_telemetry = tracing_opentelemetry::layer().with_tracer(tracer.tracer("opentelemetry"));
+
+    let logging = opentelemetry_otlp::new_pipeline().logging().with_exporter(opentelemetry_otlp::new_exporter()
+        .tonic()
+        .with_endpoint(&endpoint)).with_resource(Resource::new(vec![KeyValue::new(
+        opentelemetry_semantic_conventions::resource::SERVICE_NAME,
+        "rust-basic-app",
+    )])).install_batch(opentelemetry_sdk::runtime::Tokio)?;
+
+    let logging_telemetry = OpenTelemetryTracingBridge::new(&logging);
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
-        .with(telemetry)
+        .with(tracing_telemetry)
+        .with(logging_telemetry)
         .with(tracing_subscriber::EnvFilter::from_default_env())
         .init();
     
