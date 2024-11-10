@@ -24,9 +24,21 @@ exporters:
   debug:
     verbosity: detailed
 
+  nop:
+
 service:
   pipelines:
     logs:
       receivers: [otlp]
       processors: [ batch ]
       exporters: [otlphttp]
+
+    traces:
+      receivers: [ otlp ]
+      processors: [ batch ]
+      exporters: [ nop ]
+
+    metrics:
+      receivers: [ otlp ]
+      processors: [ batch ]
+      exporters: [ nop ]
