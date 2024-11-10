@@ -8,20 +8,16 @@ use std::sync::OnceLock;
 use opentelemetry::trace::TracerProvider;
 use opentelemetry::KeyValue;
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
-use opentelemetry_otlp::WithExportConfig;
-use opentelemetry_sdk::metrics::reader::DefaultTemporalitySelector;
-use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
+use opentelemetry_otlp::{ExportConfig, WithExportConfig};
+use opentelemetry_sdk::metrics::SdkMeterProvider;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::trace::Config;
 use opentelemetry_sdk::Resource;
+use tracing::log::log;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
 pub fn init_tracing() -> anyhow::Result<()> {
-    let endpoint = std::env::var("OTEL_EXPORTER_OTEL_URL")
-        .ok()
-        .unwrap_or("http://localhost:4317".to_owned());
-
     opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
 
     let tracer = opentelemetry_otlp::new_pipeline()
@@ -29,7 +25,7 @@ pub fn init_tracing() -> anyhow::Result<()> {
         .with_exporter(
             opentelemetry_otlp::new_exporter()
                 .tonic()
-                .with_endpoint(&endpoint),
+                .with_export_config(crate::export_config()),
         )
         .with_trace_config(
             Config::default().with_resource(Resource::new(vec![KeyValue::new(
@@ -47,7 +43,7 @@ pub fn init_tracing() -> anyhow::Result<()> {
         .with_exporter(
             opentelemetry_otlp::new_exporter()
                 .tonic()
-                .with_endpoint(&endpoint),
+                .with_export_config(crate::export_config()),
         )
         .with_resource(Resource::new(vec![KeyValue::new(
             opentelemetry_semantic_conventions::resource::SERVICE_NAME,
@@ -67,28 +63,57 @@ pub fn init_tracing() -> anyhow::Result<()> {
     Ok(())
 }
 
+fn export_config() -> ExportConfig {
+    let protocol = match std::env::var("OTEL_EXPORT_PROTOCOL")
+        .ok()
+        .unwrap_or_default()
+        .as_str()
+    {
+        "http/proto" => opentelemetry_otlp::Protocol::HttpBinary,
+        "http/json" => opentelemetry_otlp::Protocol::HttpJson,
+        "grpc" | _ => opentelemetry_otlp::Protocol::Grpc,
+    };
+
+    let endpoint = std::env::var("OTEL_EXPORTER_OTEL_URL")
+        .ok()
+        .unwrap_or("http://localhost:4317".to_owned());
+
+    log!(
+        tracing::log::Level::Info,
+        "Using OTEL_EXPORT_PROTOCOL: {:?}",
+        protocol
+    );
+    log!(
+        tracing::log::Level::Info,
+        "Using OTEL_EXPORTER_OTEL_URL: {endpoint}"
+    );
+
+    ExportConfig {
+        endpoint,
+        timeout: std::time::Duration::from_secs(3),
+        protocol,
+    }
+}
+
 pub fn metering_provider() -> &'static SdkMeterProvider {
     static METER_PROVIDER: OnceLock<SdkMeterProvider> = OnceLock::new();
 
     METER_PROVIDER.get_or_init(|| {
         let exporter = opentelemetry_otlp::new_exporter()
             .tonic()
-            .with_endpoint(
-                std::env::var("OTEL_EXPORTER_OTEL_URL")
-                    .ok()
-                    .unwrap_or("http://localhost:4317".to_owned()),
-            )
-            .build_metrics_exporter(Box::new(DefaultTemporalitySelector::new()))
-            .expect("failed to build metrics exporter");
-        let reader = PeriodicReader::builder(exporter, opentelemetry_sdk::runtime::Tokio).build();
-        let provider = SdkMeterProvider::builder()
-            .with_reader(reader)
+            .with_export_config(export_config());
+
+        let meter_provider = opentelemetry_otlp::new_pipeline()
+            .metrics(opentelemetry_sdk::runtime::Tokio)
+            .with_exporter(exporter)
             .with_resource(Resource::new([KeyValue::new(
-                "service.name",
-                "metrics-basic-example",
+                opentelemetry_semantic_conventions::resource::SERVICE_NAME,
+                "rust-basic-app",
             )]))
-            .build();
-        opentelemetry::global::set_meter_provider(provider.clone());
-        provider
+            .build()
+            .expect("failed to build meter provider");
+
+        opentelemetry::global::set_meter_provider(meter_provider.clone());
+        meter_provider
     })
 }

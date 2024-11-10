@@ -15,6 +15,7 @@ services:
     hostname: demo_app
     environment:
       - OTEL_EXPORTER_OTEL_URL=http://collector:4317
+      - OTEL_EXPORT_PROTOCOL=grpc
       - RUST_LOG=info
     ports:
       - "5000:5000"
