@@ -1,15 +1,15 @@
 mod client;
 mod server;
 
+use std::time::Duration;
+
 pub use client::*;
 pub use server::*;
-use std::sync::OnceLock;
 
 use opentelemetry::trace::TracerProvider;
 use opentelemetry::KeyValue;
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_otlp::{ExportConfig, WithExportConfig};
-use opentelemetry_sdk::metrics::SdkMeterProvider;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::trace::Config;
 use opentelemetry_sdk::Resource;
@@ -18,6 +18,24 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
 pub fn init_tracing() -> anyhow::Result<()> {
+    let endpoint = std::env::var("METRICS_EXPORT")
+        .ok()
+        .unwrap_or("http://localhost:9090".to_owned());
+
+    log!(
+        tracing::log::Level::Info,
+        "Sending prometheus metrics to: {}",
+        endpoint
+    );
+
+    metrics_exporter_prometheus::PrometheusBuilder::new()
+        .with_push_gateway(endpoint, Duration::from_secs(10), None, None)?
+        .idle_timeout(
+            metrics_util::MetricKindMask::COUNTER,
+            Some(Duration::from_secs(10)),
+        )
+        .install()?;
+
     opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
 
     let tracer = opentelemetry_otlp::new_pipeline()
@@ -95,25 +113,25 @@ fn export_config() -> ExportConfig {
     }
 }
 
-pub fn metering_provider() -> &'static SdkMeterProvider {
-    static METER_PROVIDER: OnceLock<SdkMeterProvider> = OnceLock::new();
-
-    METER_PROVIDER.get_or_init(|| {
-        let exporter = opentelemetry_otlp::new_exporter()
-            .tonic()
-            .with_export_config(export_config());
-
-        let meter_provider = opentelemetry_otlp::new_pipeline()
-            .metrics(opentelemetry_sdk::runtime::Tokio)
-            .with_exporter(exporter)
-            .with_resource(Resource::new([KeyValue::new(
-                opentelemetry_semantic_conventions::resource::SERVICE_NAME,
-                "rust-basic-app",
-            )]))
-            .build()
-            .expect("failed to build meter provider");
-
-        opentelemetry::global::set_meter_provider(meter_provider.clone());
-        meter_provider
-    })
-}
+// pub fn metering_provider() -> &'static SdkMeterProvider {
+//     static METER_PROVIDER: OnceLock<SdkMeterProvider> = OnceLock::new();
+//
+//     METER_PROVIDER.get_or_init(|| {
+//         let exporter = opentelemetry_otlp::new_exporter()
+//             .tonic()
+//             .with_export_config(export_config());
+//
+//         let meter_provider = opentelemetry_otlp::new_pipeline()
+//             .metrics(opentelemetry_sdk::runtime::Tokio)
+//             .with_exporter(exporter)
+//             .with_resource(Resource::new([KeyValue::new(
+//                 opentelemetry_semantic_conventions::resource::SERVICE_NAME,
+//                 "rust-basic-app",
+//             )]))
+//             .build()
+//             .expect("failed to build meter provider");
+//
+//         opentelemetry::global::set_meter_provider(meter_provider.clone());
+//         meter_provider
+//     })
+// }

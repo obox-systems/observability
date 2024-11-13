@@ -1,0 +1,2 @@
+remote_write:
+  - url: "http://0.0.0.0:9201/write"

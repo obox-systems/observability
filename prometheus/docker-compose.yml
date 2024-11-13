@@ -17,6 +17,7 @@ services:
       - OTEL_EXPORTER_OTEL_URL=http://collector:4317
       - OTEL_EXPORT_PROTOCOL=grpc
       - RUST_LOG=info
+      - METRICS_EXPORT=http://prometheus:9201/write
     ports:
       - "5000:5000"
 
@@ -25,8 +26,6 @@ services:
     container_name: otel_collector_prometheus
     volumes:
       - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
-    environment:
-      - EXPORT_URL=http://prometheus:9090
     ports: # I expose all possible ports for demo app
       - "1888:1888" # pprof extension
       - "8888:8888" # Prometheus metrics exposed by the Collector
@@ -41,9 +40,16 @@ services:
     image: prom/prometheus
     container_name: prometheus_demo
     volumes:
-#      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
-    command:
-      - "--web.enable-otlp-receiver"
+      - "9201:9201"
+#    command:
+#      - "--enable-feature=otlp-write-receiver"
+
+
+  grafana:
+    image: grafana/grafana-enterprise
+    ports:
+      - "3000:3000"
