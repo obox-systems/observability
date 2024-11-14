@@ -17,9 +17,10 @@ services:
       - OTEL_EXPORTER_OTEL_URL=http://collector:4317
       - OTEL_EXPORT_PROTOCOL=grpc
       - RUST_LOG=info
-      - METRICS_EXPORT=http://prometheus:9201/write
+#      - PROMETHEUS_EXPORT_URL=demo:9000
     ports:
       - "5000:5000"
+      - "9000:9000"
 
   collector:
     image: otel/opentelemetry-collector-contrib
@@ -42,10 +43,14 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
+    environment:
+      - SCRAP_TARGET=demo:9000/metrics
     ports:
       - "9090:9090"
       - "9201:9201"
-#    command:
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.external-url=http://localhost:9090'
 #      - "--enable-feature=otlp-write-receiver"
 
 

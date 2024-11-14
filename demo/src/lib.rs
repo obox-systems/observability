@@ -1,6 +1,8 @@
 mod client;
 mod server;
 
+use std::net::{SocketAddr, TcpListener};
+use std::str::FromStr;
 use std::time::Duration;
 
 pub use client::*;
@@ -18,22 +20,12 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
 pub fn init_tracing() -> anyhow::Result<()> {
-    let endpoint = std::env::var("METRICS_EXPORT")
+    let export_endpoint = std::env::var("PROMETHEUS_EXPORT_URL")
         .ok()
-        .unwrap_or("http://localhost:9090".to_owned());
-
-    log!(
-        tracing::log::Level::Info,
-        "Sending prometheus metrics to: {}",
-        endpoint
-    );
-
+        .unwrap_or("0.0.0.0:9000".to_owned());
+    
     metrics_exporter_prometheus::PrometheusBuilder::new()
-        .with_push_gateway(endpoint, Duration::from_secs(10), None, None)?
-        .idle_timeout(
-            metrics_util::MetricKindMask::COUNTER,
-            Some(Duration::from_secs(10)),
-        )
+        .with_http_listener(SocketAddr::from_str(&export_endpoint)?)
         .install()?;
 
     opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
