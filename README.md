@@ -36,6 +36,4 @@ Testing: LoadRunner - measuring system behavior and performance under load
 
 CI/CD: Ansible(not recommended), Terraform, Jenkins
 
-Scripting: python, bash
-
 Special: OpenTelemetry, Docker, Kubernetes

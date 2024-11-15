@@ -10,17 +10,6 @@ processors:
   batch:
 
 exporters:
-  otlphttp:
-    endpoint: "${env:EXPORT_URL}"
-    headers:
-      Authorization: "${env:AUTH_HEADER}"
-      X-P-Log-Source: otel
-      X-P-Stream: "${env:STREAM_NAME}"
-      Content-Type: application/json
-    tls:
-      insecure: true
-    encoding: json
-
   debug:
     verbosity: detailed
 
@@ -28,17 +17,17 @@ exporters:
 
 service:
   pipelines:
-    logs:
+    metrics:
       receivers: [otlp]
       processors: [ batch ]
-      exporters: [otlphttp]
+      exporters: [nop]
 
     traces:
       receivers: [ otlp ]
       processors: [ batch ]
       exporters: [ nop ]
 
-    metrics:
+    logs:
       receivers: [ otlp ]
       processors: [ batch ]
-      exporters: [ nop ]
+      exporters: [ nop  ]

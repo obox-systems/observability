@@ -18,12 +18,15 @@ tracing-opentelemetry = "0.27"
 tracing-subscriber = { version = "0.3", features = ["env-filter"]}
 
 # OpenTelemery
-opentelemetry = { version = "0.26", features = ["trace", "logs"]}
-opentelemetry_sdk = { version = "0.26", features = ["rt-tokio"] }
-opentelemetry-otlp = { version="0.26",  features = ["tonic", "metrics", "logs"] }
+opentelemetry = { version = "0.26", features = ["trace", "logs", "metrics"]}
+opentelemetry_sdk = { version = "0.26", features = ["rt-tokio", "metrics"] }
+opentelemetry-otlp = { version="0.26",  features = ["tonic",  "metrics", "logs"] }
 opentelemetry-semantic-conventions = { version="0.26" }
 #opentelemetry-appender-log = "0.26"
 opentelemetry-appender-tracing = "0.26.0"
+metrics = "0.24.0"
+metrics-exporter-prometheus = "0.16.0"
+metrics-util = "0.18.0"
 
 # lazy error "handling"
 anyhow = { version = "1.0"}

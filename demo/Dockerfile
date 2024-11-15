@@ -33,6 +33,6 @@ COPY --from=builder /app/docker_entry.sh docker_entry.sh
 
 RUN chmod +x ./docker_entry.sh
 
-EXPOSE 5000
+EXPOSE 5000 9000
 
 ENTRYPOINT ["./docker_entry.sh"]

@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use axum::{http::StatusCode, routing::get, Router};
+use metrics::counter;
 use tracing::Level;
 
 pub async fn run_sample_server() -> anyhow::Result<()> {
@@ -23,6 +24,8 @@ async fn handler() -> Result<(), StatusCode> {
         number @ 0..50 => {
             tracing::info!("Handler is OK. number: {number}");
 
+            counter!("request.ok").increment(1);
+
             Ok(())
         }
         number @ 50..100 => {
@@ -35,15 +38,21 @@ async fn handler() -> Result<(), StatusCode> {
 
             tracing::event!( name: "seconds from UNIX_EPOCH", Level::INFO, time = %time);
 
+            counter!("request.ok").increment(1);
+
             Ok(())
         }
         number @ 100..150 => {
             tracing::warn!("Handler is WARN, but STATUS CODE - OK. number: {number}");
 
+            counter!("request.warn").increment(1);
+
             Ok(())
         }
         number @ 150..200 => {
             tracing::warn!("Handler is WARN. number: {number}");
+
+            counter!("request.warn").increment(1);
 
             Err(StatusCode::FORBIDDEN)
         }
@@ -53,6 +62,8 @@ async fn handler() -> Result<(), StatusCode> {
             tokio::time::sleep(Duration::from_secs(1)).await;
 
             tracing::event!(Level::INFO, "Slept 1s");
+
+            counter!("request.err").increment(1);
 
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
